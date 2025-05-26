@@ -1,0 +1,159 @@
+package sistemaagenciaviagenscrud;
+
+import javax.swing.*;
+import java.awt.*;
+import java.sql.*;
+
+public class SistemaAgenciaviagensCrud {
+
+    static final String banco = "jdbc:mysql://localhost:3306/agenciaviagens";
+    
+    public static void main(String[] args) {
+        // Carrega a imagem - coloque o arquivo vla.png na pasta do projeto
+        ImageIcon logoIcon = new ImageIcon("TOPTOUR.jpg");
+        
+        // Verifica se a imagem foi carregada
+        if (logoIcon.getImageLoadStatus() != MediaTracker.COMPLETE) {
+            JOptionPane.showMessageDialog(null, "Erro ao carregar a imagem!\nVerifique se TOPTOUR.jpg está na pasta correta.");
+            System.out.println("Caminho procurado: " + new java.io.File("vla.png").getAbsolutePath());
+        }
+        
+        // Redimensiona a imagem se necessário
+        Image img = logoIcon.getImage().getScaledInstance(80, 80, Image.SCALE_SMOOTH);
+        logoIcon = new ImageIcon(img);
+
+        Connection conexao = null;
+        Statement consulta = null;
+        ResultSet resultados = null;
+        PreparedStatement minhainclusao = null;
+        PreparedStatement minharemocao = null;
+        PreparedStatement minhabusca = null;
+        
+        try {
+            conexao = DriverManager.getConnection(banco, "root", "");
+            boolean continuar = true;
+
+            while (continuar) {
+                // Cria um painel principal
+                JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
+                
+                // Painel central com o texto
+                JPanel textPanel = new JPanel();
+                textPanel.add(new JLabel("TOP TOUR AREA DE CADASTRO - Escolha uma ação:"));
+                mainPanel.add(textPanel, BorderLayout.CENTER);
+                
+                // Adiciona a imagem no canto direito
+                JLabel logoLabel = new JLabel(logoIcon);
+                mainPanel.add(logoLabel, BorderLayout.EAST);
+                
+                // Opções do menu
+                String[] opcoes = {"Inserir Cliente", "Excluir", "Buscar Cliente", "Sair"};
+                
+                // Exibe o diálogo
+                int escolha = JOptionPane.showOptionDialog(
+                    null, 
+                    mainPanel, 
+                    "TOP TOUR - AGENCIA DE TURISMO", 
+                    JOptionPane.DEFAULT_OPTION, 
+                    JOptionPane.PLAIN_MESSAGE, 
+                    null, 
+                    opcoes, 
+                    opcoes[0]
+                );
+                
+                switch (escolha) {
+                    case 0: // Inserir
+                        minhainclusao = conexao.prepareStatement("INSERT INTO turista(nome, email, telefone, passeio) VALUES(?,?,?,?)");
+                        
+                        JPanel insertPanel = new JPanel(new GridLayout(4, 2, 5, 5));
+                        insertPanel.add(new JLabel("Nome:"));
+                        JTextField nomeField = new JTextField();
+                        insertPanel.add(nomeField);
+                        insertPanel.add(new JLabel("Email:"));
+                        JTextField emailField = new JTextField();
+                        insertPanel.add(emailField);
+                        insertPanel.add(new JLabel("Telefone:"));
+                        JTextField telefoneField = new JTextField();
+                        insertPanel.add(telefoneField);
+                        insertPanel.add(new JLabel("Passeio:"));
+                        JTextField passeioField = new JTextField();
+                        insertPanel.add(passeioField);
+                        
+                        int result = JOptionPane.showConfirmDialog(
+                            null, 
+                            insertPanel, 
+                            "Cadastrar Cliente", 
+                            JOptionPane.OK_CANCEL_OPTION,
+                            JOptionPane.PLAIN_MESSAGE
+                        );
+                        
+                        if (result == JOptionPane.OK_OPTION) {
+                            minhainclusao.setString(1, nomeField.getText());
+                            minhainclusao.setString(2, emailField.getText());
+                            minhainclusao.setString(3, telefoneField.getText());
+                            minhainclusao.executeUpdate();
+                            JOptionPane.showMessageDialog(null, "Cliente cadastrado com sucesso!");
+                        }
+                        break;
+
+                    case 1: // Excluir
+                        String idParaRemover = JOptionPane.showInputDialog(null, "Informe o ID do turista que deseja excluir:");
+                        if (idParaRemover != null && !idParaRemover.trim().isEmpty()) {
+                            minharemocao = conexao.prepareStatement("DELETE FROM turista WHERE id = ?");
+                            minharemocao.setInt(1, Integer.parseInt(idParaRemover));
+                            int linhasAfetadas = minharemocao.executeUpdate();
+                            
+                            if (linhasAfetadas > 0) {
+                                JOptionPane.showMessageDialog(null, "Turista excluído com sucesso!");
+                            } else {
+                                JOptionPane.showMessageDialog(null, "Nenhum turista encontrado com esse ID.");
+                            }
+                        }
+                        break;
+
+                    case 2: // Buscar
+                        String idParaBuscar = JOptionPane.showInputDialog(null, "Informe o ID do turista que deseja buscar:");
+                        if (idParaBuscar != null && !idParaBuscar.trim().isEmpty()) {
+                            minhabusca = conexao.prepareStatement("SELECT * FROM turista WHERE id = ?");
+                            minhabusca.setInt(1, Integer.parseInt(idParaBuscar));
+                            ResultSet resultadoBusca = minhabusca.executeQuery();
+                            
+                            if (resultadoBusca.next()) {
+                                JTextArea textArea = new JTextArea(
+                                    "ID: " + resultadoBusca.getInt("id") + "\n" +
+                                    "Nome: " + resultadoBusca.getString("nome") + "\n" +
+                                    "Email: " + resultadoBusca.getString("email") + "\n" +
+                                    "Telefone: " + resultadoBusca.getString("telefone")
+                                );
+                                textArea.setEditable(false);
+                                JOptionPane.showMessageDialog(null, new JScrollPane(textArea), "Dados do Turista", JOptionPane.INFORMATION_MESSAGE);
+                            } else {
+                                JOptionPane.showMessageDialog(null, "Nenhum turista encontrado com esse ID.", "Aviso", JOptionPane.WARNING_MESSAGE);
+                            }
+                        }
+                        break;
+
+                    case 3: // Sair
+                        continuar = false;
+                        break;
+
+                    default:
+                        JOptionPane.showMessageDialog(null, "Opção inválida. Tente novamente.");
+                }
+            }
+        } catch (SQLException erro) {
+            JOptionPane.showMessageDialog(null, "Erro de banco de dados: " + erro.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+            erro.printStackTrace();
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(null, "ID inválido. Por favor, insira um número.", "Erro", JOptionPane.ERROR_MESSAGE);
+        } finally {
+            try {
+                if (resultados != null) resultados.close();
+                if (consulta != null) consulta.close();
+                if (conexao != null) conexao.close();
+            } catch (Exception erronovo) {
+                erronovo.printStackTrace();
+            }
+        }
+    }
+}
